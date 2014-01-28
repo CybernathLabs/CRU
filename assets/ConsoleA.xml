@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<controls>
+<!-- 
+	<control name="">
+		<image fileName="" />
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="" hidden="">
+				<input pin="" value="" />
+				<output pin="" value="" />
+			</state>
+		</states>
+	</control>
+-->
+	<control name="Molex Couplings Right">
+		<image fileName="" />
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="" value="" />
+				<output pin="" value="" />
+			</state>
+			<state name="Off" hidden="">
+				<input pin="" value="" />
+				<output pin="" value="" />
+			</state>
+		</states>
+	</control>
+	<control>
+		<name>Molex Couplings Right</name>
+		<state1>On</state1>
+		<state1value>1</state1value>
+		<state2>Off</state2>
+		<state2value>0</state2value>
+		<light1>-1</light1>
+		<light2>-1</light2>
+		<pin>4</pin>
+	</control>
+	
+	<control>
+		<name>Molex Couplings Left</name>
+		<state1>On</state1>
+		<state1value>1</state1value>
+		<state2>Off</state2>
+		<state2value>0</state2value>
+		<light1>-1</light1>
+		<light2>-1</light2>
+		<pin>5</pin>
+	</control>
+	
+	<control>
+		<name>Dyna-Cap</name>
+		<state1>Tighten</state1>
+		<state1value>1</state1value>
+		<state2></state2>
+		<state2value>0</state2value>
+		<light1>18</light1>
+		<light2>-1</light2>
+		<pin>12</pin>
+	</control>
+	
+	<control>
+		<name>Dyna-Cap</name>
+		<state1>Loosen</state1>
+		<state1value>1</state1value>
+		<state2></state2>
+		<state2value>1</state2value>
+		<light1>-1</light1>
+		<light2>-1</light2>
+		<pin>6</pin>
+	</control>
+	
+	<control>
+		<name>G.0.B. Illusion</name>
+		<state1>Deploy</state1>
+		<state1value>1</state1value>
+		<state2></state2>
+		<state2value></state2value>
+		<light1>-1</light1>
+		<light2>-1</light2>
+		<pin>10</pin>
+	</control>
+	
+	<!--
+	<control>
+		<name>Hypercube Collator</name>
+		<state1>On</state1>
+		<state1value>1</state1value>
+		<state2>Off</state2>
+		<state2value>0</state2value>
+		<light1>19</light1>
+		<light2>-1</light2>
+		<pin>11</pin>
+	</control>
+	-->
+	
+	<control>
+		<name>Orientation Laser</name>
+		<state1>On</state1>
+		<state1value>1</state1value>
+		<state2>Off</state2>
+		<state2value>0</state2value>
+		<light1>16</light1>
+		<light2>-1</light2>
+		<pin>7</pin>
+	</control>
+	
+	<control>
+		<name>Plutonium Grater</name>
+		<state1>Launch</state1>
+		<state1value>1</state1value>
+		<state2></state2>
+		<state2value></state2value>
+		<light1>-1</light1>
+		<light2>-1</light2>
+		<pin>3</pin>
+	</control>
+	
+	<control>
+		<name>Krylon Shield</name>
+		<state1>Pull</state1>
+		<state1value>1</state1value>
+		<state2>Push</state2>
+		<state2value>0</state2value>
+		<light1>17</light1>
+		<light2>-1</light2>
+		<pin>8</pin>
+	</control>
+	
+	<control>
+		<name>Solar Flywheel</name>
+		<state1>On</state1>
+		<state1value>1</state1value>
+		<state2>Off</state2>
+		<state2value>0</state2value>
+		<light1>-1</light1>
+		<light2>-1</light2>
+		<pin>9</pin>
+	</control>
+	
+	<control>
+		<name>Gravity Combobulator</name>
+		<state1>Disengage</state1>
+		<state1value>1</state1value>
+		<state2>Engage</state2>
+		<state2value>0</state2value>
+		<light1>14</light1>
+		<light2>-1</light2>
+		<pin>2</pin>
+	</control>
+</controls>
