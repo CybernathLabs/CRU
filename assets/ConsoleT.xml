@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<controls>
+	<control name="Electric Fence">
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="2" value="1" />
+				<output pin="" value="" />
+			</state>
+			<state name="Off" hidden="">
+				<input pin="2" value="0" />
+				<output pin="" value="" />
+			</state>
+		</states>
+	</control>
+	<control name="Heated Seat">
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="3" value="1" />
+				<output pin="17" value="1" />
+			</state>
+			<state name="Off" hidden="">
+				<input pin="3" value="0" />
+				<output pin="17" value="0" />
+			</state>
+		</states>
+	</control>
+	<control name="Left Wing Agenda">
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="4" value="1" />
+				<output pin="19" value="1" />
+			</state>
+			<state name="Off" hidden="">
+				<input pin="4" value="0" />
+				<output pin="19" value="0" />
+			</state>
+		</states>
+	</control>
+	<control name="Right Wing Agenda">
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="5" value="1" />
+				<output pin="16" value="1" />
+			</state>
+			<state name="Off" hidden="">
+				<input pin="5" value="0" />
+				<output pin="16" value="0" />
+			</state>
+		</states>
+	</control>
+	<control name="Deploy Nachos">
+		<directives>
+			<directive label="{name}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="8" value="1" />
+				<output pin="" value="" />
+			</state>
+			<state name="Off" hidden="true">
+				<input pin="8" value="0" />
+				<output pin="" value="" />
+			</state>
+		</states>
+	</control>
+	<control name="PANIC">
+		<directives>
+			<directive label="Commence {name}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="7" value="1" />
+				<output pin="" value="" />
+			</state>
+			<state name="Off" hidden="true">
+				<input pin="7" value="0" />
+				<output pin="" value="" />
+			</state>
+		</states>
+	</control>
+	<control name="Reality Distortion Field">
+		<directives>
+			<directive label="Set {name} to {state}" />
+		</directives>
+		<states>
+			<state name="On">
+				<input pin="6" value="1" />
+				<output pin="14" value="1" />
+			</state>
+			<state name="Off" hidden="">
+				<input pin="6" value="0" />
+				<output pin="14" value="0" />
+			</state>
+		</states>
+	</control>
+</controls>

@@ -6,20 +6,28 @@ package org.cybernath.cru.service
 	import flash.events.IOErrorEvent;
 	import flash.net.URLLoader;
 	import flash.net.URLRequest;
+	import flash.utils.getTimer;
+	import flash.utils.setTimeout;
 	
 	import net.eriksjodin.arduino.Arduino;
 	import net.eriksjodin.arduino.events.ArduinoEvent;
 	
 	import org.cybernath.ArduinoSocket;
 	import org.cybernath.cru.CRUConsoleEvent;
+	import org.cybernath.cru.CRUControlEvent;
+	import org.cybernath.cru.view.ConsoleDisplay;
 	import org.cybernath.cru.vo.ControlVO;
 	import org.cybernath.cru.vo.StateVO;
 	
 	[Event(name="cruStateChanged", type="org.cybernath.cru.CRUConsoleEvent")]
+	[Event(name="ctrlStateChanged", type="org.cybernath.cru.CRUControlEvent")]
 	public class CRUConsole extends EventDispatcher
 	{
 		// CRU Console Represents one of the 2 Arduinos
 		private var _configRetry:uint = 0;
+		
+		// CRU Console Display
+		private var _consoleDisplay:ConsoleDisplay;
 		
 		// CRU States:
 		private var _currentState:String;
@@ -47,12 +55,19 @@ package org.cybernath.cru.service
 			ard.addEventListener(ArduinoEvent.DIGITAL_DATA,onDigitalInput);
 			ard.resetBoard();
 			
+			// If we're connecting over bluetooth, then there was a delay connecting, so we'll need to retry.
+			if(arduinoConsole.portName.indexOf("Ada") > -1){
+				setTimeout(function():void{
+					trace("Retrying Arduino Reset...");
+					if(ard && ard.connected){
+						//ard.resetBoard();
+						ard.requestFirmwareVersionAndName();
+					}
+				},5000);
+			}
+			
 		}
 		
-		private function onDigitalInput(event:ArduinoEvent):void
-		{
-			trace("Input " + event.pin + " - " + event.value + " (" + _consoleId + ")");
-		}
 		
 		public function get currentState():String
 		{
@@ -73,6 +88,8 @@ package org.cybernath.cru.service
 		private function onConsoleId(event:ArduinoEvent):void
 		{
 			//Once Console ID has been received, we can load the config file for that console.
+			// Still seems to receive invalid console Ids where it shows as length=8, but traces as empty string. :-(\
+			// Config Error Catches this issue.
 			trace("Console ID Received:'" + event.consoleId + "'");
 			if(event.consoleId && event.consoleId.length == 8){
 				trace("Console ID Accepted:'" + event.consoleId + "'",event.consoleId.length);
@@ -107,7 +124,6 @@ package org.cybernath.cru.service
 		
 		private function onFirmware(event:ArduinoEvent):void
 		{
-			// TODO Auto-generated method stub
 			trace("Console Firmware Version Received:",event.value);
 			
 		}
@@ -119,48 +135,116 @@ package org.cybernath.cru.service
 		
 		private function parse(e:Event):void
 		{
-			//var prevControl:String = "";
+			var ctrlArray:Array = [];
 			var xmlData:XML= new XML(e.target.data);
-			var cvo:ControlVO = new ControlVO();
-			cvo.states = [];
-			var firstRun:Boolean = true;
 			
 			for each(var controlNode:XML in xmlData.control){
-				if(controlNode.name != cvo.name){
-					if(!firstRun) controls.push(cvo);
-					cvo = new ControlVO();
-					cvo.name = controlNode.name;
-					cvo.currentState = null;
-					cvo.states = [];
-					cvo.mo = (controlNode.mo == "true")?true:false;
-					firstRun = false;
-				}//if
-				var svo:StateVO = new StateVO();
-				svo.name = controlNode.state1;
-				svo.output = controlNode.light1;
-				svo.pin = controlNode.pin;
-				svo.value = controlNode.state1value;
-				cvo.states.push(svo);
-				trace(controlNode.state2, controlNode.state1);
-				if(controlNode.state2 !=""){
-					svo = new StateVO();
-					svo.name = controlNode.state2;
-					svo.output = controlNode.light2;
-					svo.pin = controlNode.pin;
-					svo.value = controlNode.state2value;
-					cvo.states.push(svo);
-				}//if
+				var ctrl:ControlVO = new ControlVO();
+				
+				// Name is required
+				ctrl.name = controlNode.@name;
+				
+				// Directives
+				for each(var directiveNode:XML in controlNode.directives.directive)
+				{
+					ctrl.directives.push(directiveNode.label);
+				}
+				// Default Directive...
+				if(ctrl.directives.length == 0){
+					ctrl.directives.push("Set {name} to {state}");
+				}
+				
+				// Loop over States
+				for each(var stateNode:XML in controlNode.states.state)
+				{
+					var st:StateVO = new StateVO();
+					st.name = stateNode.@name;
+					st.inputPin = stateNode.input.@pin
+					st.inputValue =  (stateNode.input.@value == "1")?Arduino.HIGH:Arduino.LOW;
+					
+					// Output is optional
+					if(stateNode.output && stateNode.output.pin && stateNode.output.pin.length)
+					{
+						st.outputPin = stateNode.output.@pin;
+						st.outputValue = (stateNode.output.@value == "1")?Arduino.HIGH:Arduino.LOW;
+					}
+					
+					// This is optional, but hopefully if it's missing, it'll default to false.
+					// May need to fix this later.
+					st.isHidden = (stateNode.@hidden == "true");
+					
+					st.parentControl = ctrl;
+					
+					ctrl.states.push(st);
+					
+				}
+				
+				ctrlArray.push(ctrl);
+				//trace(controlNode);
 			}//for each
-			controls.push(cvo);
-			
-			// Vomit loaded controls out to the console.
-			for each(var c:ControlVO in controls){
-				trace(c.name);
-				for each(var s:StateVO in c.states) trace("state: ", s.name, s.value);
+			trace(ctrlArray);
+			// Setting IO Pins based on the XML loaded.
+			var redundancyCheck:Array = [];
+			for each(var c:ControlVO in ctrlArray){
+				for each(var s:StateVO in c.states){
+					if(redundancyCheck.indexOf(s.inputPin) == -1){
+						ard.setPinMode(s.inputPin,Arduino.INPUT);
+						redundancyCheck.push(s.inputPin);
+						trace("Setting Pin " + s.inputPin + " to INPUT");
+					}
+					if(s.outputPin){
+						if(redundancyCheck.indexOf(s.outputPin) == -1){
+							ard.setPinMode(s.outputPin,Arduino.OUTPUT);
+							ard.writeDigitalPin(s.outputPin,Arduino.LOW);
+							trace("Setting Pin " + s.outputPin + " to OUTPUT");
+							redundancyCheck.push(s.outputPin);
+						}
+					}
+					
+				}
 			}
 			
 			ard.enableDigitalPinReporting();
+			controls = ctrlArray;
+			
+			_consoleDisplay = new ConsoleDisplay();
+			
 			currentState = CONSOLE_READY;
+			
+			
+		}
+
+		
+		private function onDigitalInput(event:ArduinoEvent):void
+		{
+			//trace("Input " + event.pin + " - " + event.value + " (" + _consoleId + ")");
+			for each(var c:ControlVO in controls){
+				for each(var s:StateVO in c.states){
+					if(s.inputPin == event.pin && s.inputValue == event.value){
+						// Store Updated State
+						c.currentState = s;
+						
+						// We'll only notify of change if it's not a "hidden" control state.
+						// (For example, momentary switches being released)
+						if(!s.isHidden && Math.abs(c.lastUpdated - getTimer()) > 200){
+							trace("STATE CHANGE: " + c.name + " = " + s.name);
+							var e:CRUControlEvent = new CRUControlEvent(CRUControlEvent.STATE_CHANGED);
+							e.newState = s;
+							dispatchEvent(e);
+						}
+						
+						if(s.outputPin > 0 && Math.abs(c.lastUpdated - getTimer()) > 200){
+							trace("OUTPUT: ",s.outputPin + " - " + s.outputValue);
+							ard.writeDigitalPin(s.outputPin,s.outputValue);
+						}
+						
+						// Time stamp this change to filter bouncing
+						c.lastUpdated = getTimer();
+					}
+				}
+			}
+			
+			
 		}
 	}
 }
