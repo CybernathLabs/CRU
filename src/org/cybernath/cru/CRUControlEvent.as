@@ -14,5 +14,12 @@ package org.cybernath.cru
 		{
 			super(type, bubbles, cancelable);
 		}
+		
+		public override function clone():Event
+		{
+			var e:CRUControlEvent = new CRUControlEvent(type,bubbles,cancelable);
+			e.newState = this.newState;
+			return e;
+		}
 	}
 }

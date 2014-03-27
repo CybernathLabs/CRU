@@ -17,14 +17,14 @@
 	</control>
 	<control name="Heated Seat">
 		<directives>
-			<directive label="Set {name} to {state}" />
+			<directive label="{state} the {name}" />
 		</directives>
 		<states>
-			<state name="On">
+			<state name="Heat Up">
 				<input pin="3" value="1" />
 				<output pin="17" value="1" />
 			</state>
-			<state name="Off" hidden="">
+			<state name="Cool Off" hidden="">
 				<input pin="3" value="0" />
 				<output pin="17" value="0" />
 			</state>
@@ -77,7 +77,7 @@
 	</control>
 	<control name="PANIC">
 		<directives>
-			<directive label="Commence {name}" />
+			<directive label="Commence with {name}" />
 		</directives>
 		<states>
 			<state name="On">
@@ -92,14 +92,14 @@
 	</control>
 	<control name="Reality Distortion Field">
 		<directives>
-			<directive label="Set {name} to {state}" />
+			<directive label="{state} the {name}" />
 		</directives>
 		<states>
-			<state name="On">
+			<state name="Deploy">
 				<input pin="6" value="1" />
 				<output pin="14" value="1" />
 			</state>
-			<state name="Off" hidden="">
+			<state name="Disengage" hidden="">
 				<input pin="6" value="0" />
 				<output pin="14" value="0" />
 			</state>

@@ -3,248 +3,189 @@ package org.cybernath.cru.service
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.events.IEventDispatcher;
-	import flash.events.IOErrorEvent;
-	import flash.net.URLLoader;
-	import flash.net.URLRequest;
-	import flash.utils.getTimer;
+	import flash.events.TimerEvent;
+	import flash.utils.Timer;
 	import flash.utils.setTimeout;
-	
-	import net.eriksjodin.arduino.Arduino;
-	import net.eriksjodin.arduino.events.ArduinoEvent;
 	
 	import org.cybernath.ArduinoSocket;
 	import org.cybernath.cru.CRUConsoleEvent;
 	import org.cybernath.cru.CRUControlEvent;
-	import org.cybernath.cru.view.ConsoleDisplay;
-	import org.cybernath.cru.vo.ControlVO;
+	import org.cybernath.cru.view.CRUDisplay;
 	import org.cybernath.cru.vo.StateVO;
+	import org.cybernath.lib.CRUUtils;
 	
-	[Event(name="cruStateChanged", type="org.cybernath.cru.CRUConsoleEvent")]
-	[Event(name="ctrlStateChanged", type="org.cybernath.cru.CRUControlEvent")]
 	public class CRUConsole extends EventDispatcher
 	{
-		// CRU Console Represents one of the 2 Arduinos
-		private var _configRetry:uint = 0;
+		private var _input:CRUDuino;
+		private var _display:CRUDisplay;
+		private var _nextState:StateVO;
 		
-		// CRU Console Display
-		private var _consoleDisplay:ConsoleDisplay;
+		private var _terrorLevel:int;
 		
-		// CRU States:
-		private var _currentState:String;
-		public static const CONSOLE_CONNECTING:String = 'consoleConnecting';
-		public static const CONSOLE_IDENTIFIED:String = 'consoleIdentified';
-		public static const LOADING_CONFIG:String = 'loadingConfig';
-		public static const CONSOLE_READY:String = 'consoleReady';
-		public static const CONSOLE_ERROR:String = 'consoleError';
+		private var _moveTimer:Timer;
 		
-		// Controls
-		public var controls:Array = [];
+		private var _glitchTimer:Timer;
 		
-		private var ard:Arduino;
-		
-		private var _consoleId:String;
 		
 		public function CRUConsole(arduinoConsole:ArduinoSocket)
 		{
-			currentState = CONSOLE_CONNECTING;
+			super(null);
 			
-			// Initiates connection to Arduino.  Resets it and awaits the console identification.
-			ard = new Arduino("127.0.0.1",arduinoConsole.portNumber);
-			ard.addEventListener(ArduinoEvent.FIRMWARE_VERSION,onFirmware);
-			ard.addEventListener(ArduinoEvent.CONSOLE_ID,onConsoleId);
-			ard.addEventListener(ArduinoEvent.DIGITAL_DATA,onDigitalInput);
-			ard.resetBoard();
+			// CRUDuino is responsible for communicating with the Arduino stuff
+			_input = new CRUDuino(arduinoConsole);
+			_input.addEventListener("cruStateChanged",onStateChanged);
+			_input.addEventListener(CRUControlEvent.STATE_CHANGED,onControlStateChange);
 			
-			// If we're connecting over bluetooth, then there was a delay connecting, so we'll need to retry.
-			if(arduinoConsole.portName.indexOf("Ada") > -1){
-				setTimeout(function():void{
-					trace("Retrying Arduino Reset...");
-					if(ard && ard.connected){
-						//ard.resetBoard();
-						ard.requestFirmwareVersionAndName();
-					}
-				},5000);
+			// The moveTimer keeps track of how many seconds the player has to respond.
+			_moveTimer = new Timer(1000,10);
+			_moveTimer.addEventListener(TimerEvent.TIMER_COMPLETE,onMoveTimerComplete);
+			
+			_glitchTimer = new Timer(1000,0);
+			_glitchTimer.addEventListener(TimerEvent.TIMER,onGlitchTimer);
+		}
+		
+		private function onGlitchTimer(event:TimerEvent):void
+		{
+			// CRUDisplay will decide what glitch is appropriate based on current threat level.
+			_display.doGlitch();
+			_glitchTimer.delay = Math.random()*500 + 500;
+		}		
+
+		private function onMoveTimerComplete(event:TimerEvent):void
+		{
+			trace("Time's Up!!");
+			_display.feedback(false,moveOn);
+			dispatchEvent(new CRUConsoleEvent(CRUConsoleEvent.FAILURE));
+		}
+		
+		// Poor-man's Event Bubbling.
+		private function onControlStateChange(event:CRUControlEvent):void
+		{
+			dispatchEvent(event.clone());
+		}
+		
+		// If our console is READY, let's put up a display for it!
+		private function onStateChanged(event:CRUConsoleEvent):void
+		{
+			if(event.state == CRUDuino.CONSOLE_READY){
+				_display = new CRUDisplay(_input.consoleId);
 			}
+			
+			dispatchEvent(event.clone());
+		}
+		
+		public function verifyInput(testState:StateVO):Boolean
+		{
+			if(testState == _nextState){
+				trace("YAY!")
+				_nextState = null;
+				dispatchEvent(new CRUConsoleEvent(CRUConsoleEvent.SUCCESS));
+				_display.feedback(true,moveOn);
+				return true;
+			}else if(testState && _nextState && testState.parentControl.name == _nextState.parentControl.name){
+				// If we're passing an incorrect value on the correct control, we'll ignore it
+				// assuming the user is on their way to the correct value.   
+				// For example, going from 1 to 3, 2 isn't wrong...
+				return true; 
+			}else{
+				return false;
+			}
+		}
+		
+		public function externalFailure():void{
+			_moveTimer.reset();
+			_display.feedback(false,moveOn);
+			dispatchEvent(new CRUConsoleEvent(CRUConsoleEvent.FAILURE));
+		}
+		
+		// This callback is used when the feedback animation completes.
+		private function moveOn():void
+		{
+			dispatchEvent(new CRUConsoleEvent(CRUConsoleEvent.REQUEST_NEW_MOVE));
+		}
+		
+		// Right now, this simply kicks off the first move
+		// In the future, it may also need to clean up some garbage from the "Attract Mode"
+		public function beginGame():void
+		{
+			trace(consoleId + " Requesting Move");
+			dispatchEvent(new CRUConsoleEvent(CRUConsoleEvent.REQUEST_NEW_MOVE));
+			_glitchTimer.start();
+		}
+		
+		// When the game ends, this wipes out the display.
+		// Probably need to find a way to differentiate between an aborted game, and a win/lose scenario.
+		public function clearGame(msg:String = ""):void
+		{
+			_display.message = msg;
+			_moveTimer.reset();
+			_glitchTimer.reset();
+		}
+		
+		// Who R U?
+		public function get consoleId():String{
+			return _input.consoleId;
+		}
+		
+		// Reveals all available controls for this console. 
+		public function get controls():Array{
+			return _input.controls
 			
 		}
 		
+		// Exposes the currently displayed Message.  Used primarily for the Console Monitor Window.
+		public function get message():String{
+			return _display.message;
+		}
 		
+		// Also used for the console monitor window.
+		public function get timer():Timer
+		{
+			return _moveTimer;
+		}
+		
+		// Currently, we'll just use the state from the CRUDuino class.  Not sure whether we'll need to change that in the future.
 		public function get currentState():String
 		{
-			return _currentState;
+			return _input.currentState;
+		}
+		
+		// When the GameMaster says to jump, we say how high...
+		// Or at least we get the NextMove into the queue.
+		public function nextMove(s:StateVO):void
+		{
+			_moveTimer.reset();
+			// If the user has gotten more than 10 answers correct, let's make it harder.
+			_moveTimer.repeatCount = (GameMaster.successes > 10)?8:15;
+//			_moveTimer.repeatCount = (GameMaster.successes > 10)?5:5;
+			_nextState = s;
+//			Pulls the instructions from the Directive nodes in the XML.  This may need some tweaking to fully support multiple directives.
+//			Also considering moving the "directives" node into the states...  This would remove the need for wildcards.
+			var msg:String = s.parentControl.directives[Math.floor(s.parentControl.directives.length * Math.random())];
+			msg = msg.replace("{name}",s.parentControl.name);
+			msg = msg.replace("{state}",s.name);
+			_display.message = CRUUtils.obfuscateDirective(msg,terrorLevel);
+			
+			_moveTimer.start();
+		}
+		
+		
+		public function get terrorLevel():int
+		{
+			return _terrorLevel;
 		}
 
-		public function set currentState(value:String):void
+		public function set terrorLevel(value:int):void
 		{
-			_currentState = value;
-			trace("Console State changed (" + _consoleId + "): " + _currentState);
-			
-			// Notify listeners of state changes.
-			var e:CRUConsoleEvent = new CRUConsoleEvent(CRUConsoleEvent.STATE_CHANGED);
-			e.state = _currentState;
-			dispatchEvent(e);
-		}
-
-		private function onConsoleId(event:ArduinoEvent):void
-		{
-			//Once Console ID has been received, we can load the config file for that console.
-			// Still seems to receive invalid console Ids where it shows as length=8, but traces as empty string. :-(\
-			// Config Error Catches this issue.
-			trace("Console ID Received:'" + event.consoleId + "'");
-			if(event.consoleId && event.consoleId.length == 8){
-				trace("Console ID Accepted:'" + event.consoleId + "'",event.consoleId.length);
-				_consoleId = event.consoleId;
-				if(currentState == CONSOLE_CONNECTING){
-					currentState = LOADING_CONFIG;
-					loadConfig(_consoleId);
-				}
+			_terrorLevel = value;
+			if(_display){
+				_display.terrorLevel = _terrorLevel;
 			}
 		}
 		
-		private function loadConfig(configName:String):void
+		public function get nextState():StateVO
 		{
-			if(_configRetry > 2){
-				currentState = CONSOLE_ERROR;
-				return;
-			}
-			// Load the controls from the config file provided.
-			var loader:URLLoader = new URLLoader();
-			loader.load(new URLRequest(configName + ".xml"));
-			loader.addEventListener(Event.COMPLETE, parse);
-			loader.addEventListener(IOErrorEvent.IO_ERROR,onConfigFail);
-		}
-		
-		private function onConfigFail(event:IOErrorEvent):void
-		{
-			_configRetry++;
-			trace("Console Load Failed.  Retry " + _configRetry);
-			currentState = CONSOLE_CONNECTING;
-			ard.resetBoard();
-		}
-		
-		private function onFirmware(event:ArduinoEvent):void
-		{
-			trace("Console Firmware Version Received:",event.value);
-			
-		}
-		
-		public function get consoleId():String
-		{
-			return _consoleId;
-		}
-		
-		private function parse(e:Event):void
-		{
-			var ctrlArray:Array = [];
-			var xmlData:XML= new XML(e.target.data);
-			
-			for each(var controlNode:XML in xmlData.control){
-				var ctrl:ControlVO = new ControlVO();
-				
-				// Name is required
-				ctrl.name = controlNode.@name;
-				
-				// Directives
-				for each(var directiveNode:XML in controlNode.directives.directive)
-				{
-					ctrl.directives.push(directiveNode.label);
-				}
-				// Default Directive...
-				if(ctrl.directives.length == 0){
-					ctrl.directives.push("Set {name} to {state}");
-				}
-				
-				// Loop over States
-				for each(var stateNode:XML in controlNode.states.state)
-				{
-					var st:StateVO = new StateVO();
-					st.name = stateNode.@name;
-					st.inputPin = stateNode.input.@pin
-					st.inputValue =  (stateNode.input.@value == "1")?Arduino.HIGH:Arduino.LOW;
-					
-					// Output is optional
-					if(stateNode.output && stateNode.output.pin && stateNode.output.pin.length)
-					{
-						st.outputPin = stateNode.output.@pin;
-						st.outputValue = (stateNode.output.@value == "1")?Arduino.HIGH:Arduino.LOW;
-					}
-					
-					// This is optional, but hopefully if it's missing, it'll default to false.
-					// May need to fix this later.
-					st.isHidden = (stateNode.@hidden == "true");
-					
-					st.parentControl = ctrl;
-					
-					ctrl.states.push(st);
-					
-				}
-				
-				ctrlArray.push(ctrl);
-				//trace(controlNode);
-			}//for each
-			trace(ctrlArray);
-			// Setting IO Pins based on the XML loaded.
-			var redundancyCheck:Array = [];
-			for each(var c:ControlVO in ctrlArray){
-				for each(var s:StateVO in c.states){
-					if(redundancyCheck.indexOf(s.inputPin) == -1){
-						ard.setPinMode(s.inputPin,Arduino.INPUT);
-						redundancyCheck.push(s.inputPin);
-						trace("Setting Pin " + s.inputPin + " to INPUT");
-					}
-					if(s.outputPin){
-						if(redundancyCheck.indexOf(s.outputPin) == -1){
-							ard.setPinMode(s.outputPin,Arduino.OUTPUT);
-							ard.writeDigitalPin(s.outputPin,Arduino.LOW);
-							trace("Setting Pin " + s.outputPin + " to OUTPUT");
-							redundancyCheck.push(s.outputPin);
-						}
-					}
-					
-				}
-			}
-			
-			ard.enableDigitalPinReporting();
-			controls = ctrlArray;
-			
-			_consoleDisplay = new ConsoleDisplay();
-			
-			currentState = CONSOLE_READY;
-			
-			
-		}
-
-		
-		private function onDigitalInput(event:ArduinoEvent):void
-		{
-			//trace("Input " + event.pin + " - " + event.value + " (" + _consoleId + ")");
-			for each(var c:ControlVO in controls){
-				for each(var s:StateVO in c.states){
-					if(s.inputPin == event.pin && s.inputValue == event.value){
-						// Store Updated State
-						c.currentState = s;
-						
-						// We'll only notify of change if it's not a "hidden" control state.
-						// (For example, momentary switches being released)
-						if(!s.isHidden && Math.abs(c.lastUpdated - getTimer()) > 200){
-							trace("STATE CHANGE: " + c.name + " = " + s.name);
-							var e:CRUControlEvent = new CRUControlEvent(CRUControlEvent.STATE_CHANGED);
-							e.newState = s;
-							dispatchEvent(e);
-						}
-						
-						if(s.outputPin > 0 && Math.abs(c.lastUpdated - getTimer()) > 200){
-							trace("OUTPUT: ",s.outputPin + " - " + s.outputValue);
-							ard.writeDigitalPin(s.outputPin,s.outputValue);
-						}
-						
-						// Time stamp this change to filter bouncing
-						c.lastUpdated = getTimer();
-					}
-				}
-			}
-			
-			
+			return _nextState;
 		}
 	}
 }
