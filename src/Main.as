@@ -1,33 +1,22 @@
 package
 {
-	import com.adobe.viewsource.ViewSource;
+	//import com.adobe.viewsource.ViewSource;
 	import com.drastudio.Utilities;
 	
 	import flash.desktop.NativeApplication;
-	import flash.display.NativeWindow;
-	import flash.display.NativeWindowInitOptions;
 	import flash.display.Sprite;
-	import flash.display.StageAlign;
-	import flash.display.StageScaleMode;
 	import flash.events.Event;
 	import flash.events.KeyboardEvent;
 	import flash.events.MouseEvent;
 	import flash.net.SharedObject;
 	import flash.text.TextField;
 	import flash.ui.Keyboard;
-	import flash.utils.setTimeout;
 	
-	import lib.vidShortSparks;
-	import lib.vidSmallFire;
-	import lib.vidSmoke;
 	
-	import net.eriksjodin.arduino.Arduino;
-	import net.eriksjodin.arduino.events.ArduinoEvent;
 	
 	import org.cybernath.ArduinoSocket;
 	import org.cybernath.SerproxyHelper;
 	import org.cybernath.cru.CRUConsoleEvent;
-	import org.cybernath.cru.CRUControlEvent;
 	import org.cybernath.cru.service.CRUConsole;
 	import org.cybernath.cru.service.CRUDuino;
 	import org.cybernath.cru.service.GameMaster;
@@ -35,7 +24,6 @@ package
 	import org.cybernath.cru.services.CommEvent;
 	import org.cybernath.cru.view.MiniCRU;
 	import org.cybernath.cru.view.ScoreDisplay;
-	import org.cybernath.cru.view.VideoOverlay;
 	import org.cybernath.lib.LayoutBox;
 	
 	[SWF(height="600",width="800")]
