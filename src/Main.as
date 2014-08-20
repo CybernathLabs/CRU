@@ -31,6 +31,8 @@ package
 	import org.cybernath.cru.service.CRUConsole;
 	import org.cybernath.cru.service.CRUDuino;
 	import org.cybernath.cru.service.GameMaster;
+	import org.cybernath.cru.services.CRUServer;
+	import org.cybernath.cru.services.CommEvent;
 	import org.cybernath.cru.view.MiniCRU;
 	import org.cybernath.cru.view.ScoreDisplay;
 	import org.cybernath.cru.view.VideoOverlay;
@@ -47,13 +49,20 @@ package
 		
 		private var _buttonBox:LayoutBox;
 		
+		private var _comms:CRUServer;
+		
+		private var _clientText:TextField;
+		
 		public function Main()
 		{
+			_comms = CRUServer.getInstance();
+			_comms.addEventListener(CommEvent.CRU_COMMS_EVENT,onCommsEvent);
 			
 			var serp:SerproxyHelper = new SerproxyHelper();
 			var sockets:Array = serp.connect();
 			
 			_gameMaster = new GameMaster();
+
 			
 			for each(var aSock:ArduinoSocket in sockets){
 				var a:CRUConsole = new CRUConsole(aSock);
@@ -94,6 +103,15 @@ package
 			scoreDisp.y = (_buttonBox.y - scoreDisp.height) - 10;
 			addChild(scoreDisp);
 			
+			_clientText = Utilities.easyText("0 Clients Connected...");
+			_clientText.x = 10;
+			_clientText.y = stage.stageHeight - _clientText.height - 10;
+			addChild(_clientText);
+		}
+		
+		private function onCommsEvent(event:CommEvent):void
+		{
+			_clientText.text = event.value;
 		}
 		
 		private function onKeyDown(event:KeyboardEvent):void

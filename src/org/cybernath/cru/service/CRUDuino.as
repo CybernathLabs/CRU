@@ -17,6 +17,7 @@ package org.cybernath.cru.service
 	import org.cybernath.cru.CRUControlEvent;
 	import org.cybernath.cru.view.CRUDisplay;
 	import org.cybernath.cru.vo.ControlVO;
+	import org.cybernath.cru.vo.OutputVO;
 	import org.cybernath.cru.vo.StateVO;
 	
 	[Event(name="cruStateChanged", type="org.cybernath.cru.CRUConsoleEvent")]
@@ -40,7 +41,11 @@ package org.cybernath.cru.service
 		// Controls
 		public var controls:Array = [];
 		
+		private var outputs:Array = [];
+		
 		private var ard:Arduino;
+		
+		private var _threatLevel:int = 0;
 		
 		private var _consoleId:String;
 		
@@ -69,6 +74,23 @@ package org.cybernath.cru.service
 		}
 		
 		
+		public function get threatLevel():int
+		{
+			return _threatLevel;
+		}
+
+		public function set threatLevel(value:int):void
+		{
+			_threatLevel = value;
+			for each(var out:OutputVO in outputs){
+				if(_threatLevel >= out.minThreat && _threatLevel <= out.maxThreat){
+					ard.writeDigitalPin(out.pin,out.activeValue);
+				}else{
+					ard.writeDigitalPin(out.pin,out.inactiveValue);
+				}
+			}
+		}
+
 		public function get consoleDisplay():CRUDisplay
 		{
 			return _consoleDisplay;
@@ -149,7 +171,7 @@ package org.cybernath.cru.service
 			var ctrlArray:Array = [];
 			var xmlData:XML= new XML(e.target.data);
 			
-			for each(var controlNode:XML in xmlData.control){
+			for each(var controlNode:XML in xmlData.controls.control){
 				var ctrl:ControlVO = new ControlVO();
 				
 				// Name is required
@@ -193,6 +215,19 @@ package org.cybernath.cru.service
 				ctrlArray.push(ctrl);
 				//trace(controlNode);
 			}//for each
+			
+			for each(var out:XML in xmlData.special.output){
+//				<output name="" minThreat="" maxThreat="" pin="" activeValue="" inactiveValue="" />
+				var outVO:OutputVO = new OutputVO();
+				outVO.name = out.@name;
+				outVO.minThreat = out.@minThreat;
+				outVO.maxThreat = out.@maxThreat;
+				outVO.pin = out.@pin;
+				outVO.activeValue = out.@activeValue;
+				outVO.inactiveValue = out.@inactiveValue;
+				outputs.push(outVO);
+			}
+			
 			trace(ctrlArray);
 			// Setting IO Pins based on the XML loaded.
 			var redundancyCheck:Array = [];

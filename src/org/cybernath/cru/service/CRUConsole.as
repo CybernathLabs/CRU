@@ -159,6 +159,8 @@ package org.cybernath.cru.service
 			_moveTimer.repeatCount = (GameMaster.successes > 10)?8:15;
 //			_moveTimer.repeatCount = (GameMaster.successes > 10)?5:5;
 			_nextState = s;
+			
+			
 //			Pulls the instructions from the Directive nodes in the XML.  This may need some tweaking to fully support multiple directives.
 //			Also considering moving the "directives" node into the states...  This would remove the need for wildcards.
 			var msg:String = s.parentControl.directives[Math.floor(s.parentControl.directives.length * Math.random())];
@@ -180,6 +182,10 @@ package org.cybernath.cru.service
 			_terrorLevel = value;
 			if(_display){
 				_display.terrorLevel = _terrorLevel;
+			}
+			
+			if(_input){
+				_input.threatLevel = _terrorLevel;
 			}
 		}
 		

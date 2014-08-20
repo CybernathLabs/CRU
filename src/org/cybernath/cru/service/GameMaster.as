@@ -1,5 +1,7 @@
 package org.cybernath.cru.service
 {
+	import com.greensock.TweenLite;
+	
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.events.IEventDispatcher;
@@ -7,6 +9,8 @@ package org.cybernath.cru.service
 	import org.cybernath.cru.CRUConsoleEvent;
 	import org.cybernath.cru.CRUControlEvent;
 	import org.cybernath.cru.events.GameStateEvent;
+	import org.cybernath.cru.services.CRUMessage;
+	import org.cybernath.cru.services.CRUServer;
 	import org.cybernath.cru.vo.StateVO;
 	import org.cybernath.lib.CRUUtils;
 	
@@ -29,13 +33,15 @@ package org.cybernath.cru.service
 		
 		private static var _threatLevel:int;
 		
+		private var _comms:CRUServer;
+		
 		private var consoles:Array = [];
 		
 		public function GameMaster(target:IEventDispatcher=null)
 		{
 			super(target);
 			gameState = ATTRACT_MODE;
-			
+			_comms = CRUServer.getInstance();
 		}
 		
 		public function registerConsole(con:CRUConsole):void
@@ -57,6 +63,7 @@ package org.cybernath.cru.service
 			if(_failures > LOSE_THRESHOLD){
 				trace("YOU LOSE!");
 				gameState = GAME_OVER_LOSE;
+				_comms.sendString("You lose.\nBetter Luck Next Time!");
 				for each(var con:CRUConsole in consoles){
 					con.clearGame("Better Luck Next Time!");
 				}
@@ -68,6 +75,7 @@ package org.cybernath.cru.service
 			_successes++;
 			if(_successes >= WIN_THRESHOLD){
 				gameState = GAME_OVER_WIN;
+				_comms.sendString("You Win!\nWelcome to the World of the Future!");
 				for each(var con:CRUConsole in consoles){
 					con.clearGame("You Win!\nWelcome to the World of the Future!");
 				}
@@ -120,6 +128,8 @@ package org.cybernath.cru.service
 		public function beginGame():void
 		{
 			trace("Beginning game with " + consoles.length + " consoles.");
+			
+			_comms.sendString("Beginning game with " + consoles.length + " consoles.");
 			_successes = 0;
 			_failures = 0;
 			setThreatLevel(0);
@@ -181,10 +191,24 @@ package org.cybernath.cru.service
 		
 		public function setThreatLevel(val:int):void
 		{
+			if(_threatLevel == val)return;
 			_threatLevel = val;
 			for each(var c:CRUConsole in consoles){
 				c.terrorLevel = val;
 			}
+
+			// It seems like there's simply too much shit going on here, so MacOS thinks that the application froze.
+			// By adding this to a delayed call, we take it out of the linear flow and give the system time to catch up.
+			TweenLite.delayedCall(0.5,function():void{
+				var msg:CRUMessage = new CRUMessage();
+				msg.correctAnswers = _successes;
+				msg.wrongAnswers = _failures;
+				msg.threatLevel = _threatLevel;
+				msg.value = "Threat Level: " + _threatLevel;
+				msg.type = CRUMessage.CRU_EVENT;
+				_comms.postMessage(msg);
+			});
+			
 		}
 	}
 }
