@@ -11,11 +11,13 @@ package org.cybernath.cru.view
 	import flash.display.Sprite;
 	import flash.display.StageAlign;
 	import flash.display.StageScaleMode;
+	import flash.events.KeyboardEvent;
 	import flash.events.MouseEvent;
 	import flash.events.NativeWindowBoundsEvent;
 	import flash.events.TimerEvent;
 	import flash.geom.Rectangle;
 	import flash.net.SharedObject;
+	import flash.ui.Keyboard;
 	import flash.utils.Timer;
 	
 	import lib.GameDisplayBase;
@@ -69,6 +71,29 @@ package org.cybernath.cru.view
 			setupDisplay();
 			this.addEventListener(NativeWindowBoundsEvent.MOVE,storeWindowLoc);
 			this.addEventListener(NativeWindowBoundsEvent.RESIZE,storeWindowLoc);
+			
+			//Attempting Keyboard-based window resizing...
+			this.stage.addEventListener(KeyboardEvent.KEY_DOWN,onKeyDown);
+			
+			
+		}
+		
+		protected function onKeyDown(event:KeyboardEvent):void
+		{
+			if(event.ctrlKey && event.keyCode == Keyboard.UP){
+				//Make Bigger Vertically
+				stage.nativeWindow.height += 5;
+			}else if(event.ctrlKey && event.keyCode == Keyboard.DOWN){
+				//Make Smaller Vertically
+				stage.nativeWindow.height -= 5;
+			}else if(event.ctrlKey && event.keyCode == Keyboard.RIGHT){
+				//Make Bigger Horizontally
+				stage.nativeWindow.width += 5;
+			}else if(event.ctrlKey && event.keyCode == Keyboard.LEFT){
+				//Make smaller horizontally.
+				stage.nativeWindow.width -= 5;
+				
+			}
 		}
 		
 		public function doGlitch():void
