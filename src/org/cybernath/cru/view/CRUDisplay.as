@@ -5,6 +5,7 @@ package org.cybernath.cru.view
 	
 	import flash.display.Bitmap;
 	import flash.display.BitmapData;
+	import flash.display.DisplayObject;
 	import flash.display.NativeWindow;
 	import flash.display.NativeWindowInitOptions;
 	import flash.display.NativeWindowSystemChrome;
@@ -76,6 +77,21 @@ package org.cybernath.cru.view
 			this.stage.addEventListener(KeyboardEvent.KEY_DOWN,onKeyDown);
 			
 			
+		}
+		
+		public function addChild(child:DisplayObject):void
+		{
+			stage.addChild(child);
+		}
+		
+		public function removeChild(child:DisplayObject):void
+		{
+			stage.removeChild(child);
+		}
+		
+		public function contains(child:DisplayObject):Boolean
+		{
+			return stage.contains(child);
 		}
 		
 		protected function onKeyDown(event:KeyboardEvent):void

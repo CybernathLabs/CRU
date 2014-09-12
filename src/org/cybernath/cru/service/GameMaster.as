@@ -9,6 +9,7 @@ package org.cybernath.cru.service
 	import org.cybernath.cru.CRUConsoleEvent;
 	import org.cybernath.cru.CRUControlEvent;
 	import org.cybernath.cru.events.GameStateEvent;
+	import org.cybernath.cru.services.CRUClient;
 	import org.cybernath.cru.services.CRUMessage;
 	import org.cybernath.cru.services.CRUServer;
 	import org.cybernath.cru.vo.StateVO;
@@ -18,6 +19,7 @@ package org.cybernath.cru.service
 	{
 		public static const ATTRACT_MODE:String = 'attractMode';
 		public static const INIT_GAME:String = 'initializingGame'; // Not currently used.
+		public static const TUTORING_PLAYERS:String = 'tutoringPlayers';
 		public static const PLAY:String = 'playingGame';
 		public static const GAME_OVER_WIN:String = 'gameOverWin';
 		public static const GAME_OVER_LOSE:String = 'gameOverLose';
@@ -124,9 +126,56 @@ package org.cybernath.cru.service
 			}
 		}
 		
-		// Kicks off the gameplay, wiping out previous values.
+		// Launches Tutorial...
 		public function beginGame():void
 		{
+			for each(var con:CRUConsole in consoles){
+				if(con.currentState != CRUDuino.CONSOLE_READY){
+					consoles.splice(consoles.indexOf(con),1);
+				}
+			}
+			
+			_comms.sendString("Beginning tutorial with " + consoles.length + " consoles.");
+			_successes = 0;
+			_failures = 0;
+			setThreatLevel(0);
+			
+			// We're already tutoring.  Clearly someone is impatient.
+			if(gameState == TUTORING_PLAYERS){
+				for each(var con2:CRUConsole in consoles){
+					con2.endTutorial();
+				}
+				tutorialEnded();
+				return;
+			}
+			
+			gameState = TUTORING_PLAYERS;
+			for each(var con3:CRUConsole in consoles)
+			{
+				con3.displayTutorial();
+				con3.addEventListener("tutorialComplete",tutorialEnd);
+			}
+			
+		}
+		
+		private function tutorialEnd(event:Event):void
+		{
+			var tutCount:int = 0;
+			for each(var con:CRUConsole in consoles)
+			{
+				if(con.isTutoring) tutCount++;
+			}
+			
+			if(tutCount > 0){
+				trace("Not finished yet.",tutCount);
+			}else{
+				tutorialEnded();
+			}
+		}
+		
+		// Kicks off the gameplay, wiping out previous values.
+		private function tutorialEnded():void{
+			
 			trace("Beginning game with " + consoles.length + " consoles.");
 			
 			_comms.sendString("Beginning game with " + consoles.length + " consoles.");
@@ -141,12 +190,20 @@ package org.cybernath.cru.service
 					consoles.splice(consoles.indexOf(con),1);
 				}
 			}
+			trace("Beginning game with " + consoles.length + " consoles.");
 			
 		}
 		
 		// Kill Switch.
 		public function abortGame():void
 		{
+			if(gameState == TUTORING_PLAYERS){
+				for each(var con2:CRUConsole in consoles){
+					con2.endTutorial();
+				}
+				tutorialEnded();
+			}
+			
 			gameState = ATTRACT_MODE;
 			setThreatLevel(0);
 			for each(var con:CRUConsole in consoles){

@@ -19,6 +19,8 @@ package org.cybernath.cru.service
 	import org.cybernath.cru.vo.ControlVO;
 	import org.cybernath.cru.vo.OutputVO;
 	import org.cybernath.cru.vo.StateVO;
+	import org.cybernath.cru.vo.ThreatVO;
+	import org.cybernath.cru.vo.TimerVO;
 	
 	[Event(name="cruStateChanged", type="org.cybernath.cru.CRUConsoleEvent")]
 	[Event(name="ctrlStateChanged", type="org.cybernath.cru.CRUControlEvent")]
@@ -41,7 +43,14 @@ package org.cybernath.cru.service
 		// Controls
 		public var controls:Array = [];
 		
+		// Special Digital Outputs... Based on threat level.
 		private var outputs:Array = [];
+		
+		// Timer Output.
+		private var timerOutputs:Array = [];
+		
+		// Threat Level Output as analog...
+		private var threatOutputs:Array = [];
 		
 		private var ard:Arduino;
 		
@@ -88,6 +97,11 @@ package org.cybernath.cru.service
 				}else{
 					ard.writeDigitalPin(out.pin,out.inactiveValue);
 				}
+			}
+			
+			for each(var th:ThreatVO in threatOutputs){
+				var val:Number = (( th.endValue - th.startValue) + th.startValue) * (_threatLevel/5); 
+				ard.writeAnalogPin(th.pin,val);
 			}
 		}
 
@@ -228,6 +242,25 @@ package org.cybernath.cru.service
 				outputs.push(outVO);
 			}
 			
+			for each(var tim:XML in xmlData.special.timer){
+				var timVO:TimerVO = new TimerVO();
+				timVO.pin = tim.@pin;
+				timVO.startValue = tim.@startValue;
+				timVO.endValue = tim.@endValue;
+				ard.setPinMode(timVO.pin,Arduino.PWM);
+				timerOutputs.push(timVO);
+			}
+			
+			for each(var th:XML in xmlData.special.threat){
+				var thVO:ThreatVO = new ThreatVO();
+				thVO.pin = th.@pin;
+				thVO.startValue = th.@startValue;
+				thVO.endValue = th.@endValue;
+				ard.setPinMode(thVO.pin,Arduino.PWM);
+				threatOutputs.push(thVO);
+			}
+			
+			
 			trace(ctrlArray);
 			// Setting IO Pins based on the XML loaded.
 			var redundancyCheck:Array = [];
@@ -262,6 +295,14 @@ package org.cybernath.cru.service
 			
 		}
 
+		public function setTimer(pct:Number):void{
+			for each(var t:TimerVO in timerOutputs){
+				
+				var val:Number = (( t.endValue - t.startValue) * pct) + t.startValue;
+				trace("settingTimer in CRUDUINO:",t.pin,val);
+				ard.writeAnalogPin(t.pin,val);
+			}
+		}
 		
 		private function onDigitalInput(event:ArduinoEvent):void
 		{

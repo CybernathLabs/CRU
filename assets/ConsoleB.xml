@@ -8,11 +8,11 @@
 			<states>
 				<state name="Include" hidden="">
 					<input pin="6" value="1" />
-					<output pin="13" value="1" />
+					<output pin="44" value="1" />
 				</state>
 				<state name="Off" hidden="true">
 					<input pin="6" value="0" />
-					<output pin="13" value="0" />
+					<output pin="44" value="0" />
 				</state>
 			</states>
 		</control>
@@ -154,4 +154,7 @@
 			</states>
 		</control>
 	</controls>
+	<special>
+		<timer pin="13" startValue="255" endValue="30" />
+	</special>
 </console>

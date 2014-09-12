@@ -107,4 +107,8 @@
 			</states>
 		</control>
 	</controls>
+	<special>
+		<timer pin="10" startValue="0" endValue="255" />
+		<threat pin="11" startValue="0" endValue="240" />
+	</special>
 </console>

@@ -11,6 +11,7 @@ package org.cybernath.cru.service
 	import org.cybernath.cru.CRUConsoleEvent;
 	import org.cybernath.cru.CRUControlEvent;
 	import org.cybernath.cru.view.CRUDisplay;
+	import org.cybernath.cru.view.TutorialDisplay;
 	import org.cybernath.cru.vo.StateVO;
 	import org.cybernath.lib.CRUUtils;
 	
@@ -26,6 +27,8 @@ package org.cybernath.cru.service
 		
 		private var _glitchTimer:Timer;
 		
+		private var _tut:TutorialDisplay;
+		
 		
 		public function CRUConsole(arduinoConsole:ArduinoSocket)
 		{
@@ -37,11 +40,17 @@ package org.cybernath.cru.service
 			_input.addEventListener(CRUControlEvent.STATE_CHANGED,onControlStateChange);
 			
 			// The moveTimer keeps track of how many seconds the player has to respond.
-			_moveTimer = new Timer(1000,10);
+			_moveTimer = new Timer(100,100);
 			_moveTimer.addEventListener(TimerEvent.TIMER_COMPLETE,onMoveTimerComplete);
+			_moveTimer.addEventListener(TimerEvent.TIMER,onTimerTick);
 			
 			_glitchTimer = new Timer(1000,0);
 			_glitchTimer.addEventListener(TimerEvent.TIMER,onGlitchTimer);
+		}
+		
+		private function onTimerTick(event:TimerEvent):void
+		{
+			_input.setTimer(_moveTimer.currentCount/_moveTimer.repeatCount);
 		}
 		
 		private function onGlitchTimer(event:TimerEvent):void
@@ -74,6 +83,29 @@ package org.cybernath.cru.service
 			dispatchEvent(event.clone());
 		}
 		
+		public function displayTutorial():void{
+			if(!_display)return;
+			if(_tut && _display.contains(_tut))
+			{
+				_display.removeChild(_tut);
+			}
+			_tut = new TutorialDisplay();
+			_display.addChild(_tut);
+			_tut.addEventListener("tutorialComplete",endTutorial);
+		}
+		public function get isTutoring():Boolean{
+			return (_tut && _display.contains(_tut));
+		}
+		
+		public function endTutorial(event:Event = null):void
+		{
+			if(_tut){
+				_tut.removeEventListener("tutorialComplete",endTutorial);
+				_display.removeChild(_tut);
+			}
+			this.dispatchEvent(new Event("tutorialComplete"));
+		}
+		
 		public function verifyInput(testState:StateVO):Boolean
 		{
 			if(testState == _nextState){
@@ -94,6 +126,7 @@ package org.cybernath.cru.service
 		
 		public function externalFailure():void{
 			_moveTimer.reset();
+			_input.setTimer(0);
 			_display.feedback(false,moveOn);
 			dispatchEvent(new CRUConsoleEvent(CRUConsoleEvent.FAILURE));
 		}
@@ -119,6 +152,7 @@ package org.cybernath.cru.service
 		{
 			_display.message = msg;
 			_moveTimer.reset();
+			_input.setTimer(0);
 			_glitchTimer.reset();
 		}
 		
@@ -155,8 +189,9 @@ package org.cybernath.cru.service
 		public function nextMove(s:StateVO):void
 		{
 			_moveTimer.reset();
+			_input.setTimer(0);
 			// If the user has gotten more than 10 answers correct, let's make it harder.
-			_moveTimer.repeatCount = (GameMaster.successes > 10)?8:15;
+			_moveTimer.repeatCount = (GameMaster.successes > 10)?80:150;
 //			_moveTimer.repeatCount = (GameMaster.successes > 10)?5:5;
 			_nextState = s;
 			
