@@ -12,8 +12,6 @@ package
 	import flash.text.TextField;
 	import flash.ui.Keyboard;
 	
-	
-	
 	import org.cybernath.ArduinoSocket;
 	import org.cybernath.SerproxyHelper;
 	import org.cybernath.cru.CRUConsoleEvent;
@@ -40,15 +38,18 @@ package
 		private var _comms:CRUServer;
 		
 		private var _clientText:TextField;
+
+		private var _serp:SerproxyHelper;
 		
 		public function Main()
 		{
 			_comms = CRUServer.getInstance();
 			_comms.addEventListener(CommEvent.CRU_COMMS_EVENT,onCommsEvent);
 			
-			var serp:SerproxyHelper = new SerproxyHelper();
-			var sockets:Array = serp.connect();
-			
+			_serp = new SerproxyHelper();
+			var sockets:Array = _serp.connect();
+			NativeApplication.nativeApplication.addEventListener(Event.EXITING,_serp.onExiting);
+			stage.nativeWindow.addEventListener(Event.CLOSE,function():void{ _serp.onExiting(null); });
 			_gameMaster = new GameMaster();
 
 			
@@ -84,7 +85,7 @@ package
 			});
 			_buttonBox.addChild(resetBtn);
 			
-			stage.nativeWindow.addEventListener(Event.CLOSE,function():void{ NativeApplication.nativeApplication.exit(); });
+			//stage.nativeWindow.addEventListener(Event.CLOSE,function():void{ NativeApplication.nativeApplication.exit(); });
 			stage.addEventListener(KeyboardEvent.KEY_DOWN,onKeyDown);
 			var scoreDisp:ScoreDisplay = new ScoreDisplay();
 			scoreDisp.x = (stage.stageWidth - scoreDisp.width)/2;

@@ -55,11 +55,11 @@
 			<states>
 				<state name="On" hidden="">
 					<input pin="8" value="1" />
-					<output pin="13" value="1" />
+					<output pin="" value="" />
 				</state>
 				<state name="Off" hidden="">
 					<input pin="8" value="0" />
-					<output pin="13" value="0" />
+					<output pin="" value="" />
 				</state>
 			</states>
 		</control>
@@ -172,6 +172,6 @@
 	<special>
 		<output name="Light Flicker" minThreat="4" maxThreat="5" pin="12" activeValue="1" inactiveValue="0" />
 		<output name="Eject Panel" minThreat="3" maxThreat="3" pin="53" activeValue="0" inactiveValue="1" />
-		<timer pin="10" startValue="0" endValue="255" />
+		<timer pin="13" startValue="255" endValue="0" />
 	</special>
 </console>

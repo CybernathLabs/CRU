@@ -6,6 +6,7 @@ package org.cybernath.cru.service
 	import flash.events.IOErrorEvent;
 	import flash.net.URLLoader;
 	import flash.net.URLRequest;
+	import flash.system.Capabilities;
 	import flash.utils.getTimer;
 	import flash.utils.setTimeout;
 	
@@ -70,7 +71,7 @@ package org.cybernath.cru.service
 			ard.resetBoard();
 			
 			// If we're connecting over bluetooth, then there was a delay connecting, so we'll need to retry.
-			if(arduinoConsole.portName.indexOf("Ada") > -1){
+			if(arduinoConsole.portName.indexOf("Ada") > -1 || Capabilities.os.indexOf("Win") > -1){
 				setTimeout(function():void{
 					trace("Retrying Arduino Reset...");
 					if(ard && ard.connected){
